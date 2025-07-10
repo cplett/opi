@@ -1,13 +1,14 @@
 from typing import Tuple, Optional
 
+
 class ExtoptInterface:
     """
     Class for reading and writing ORCA files related to the ExtOpt keyword
     """
+
     def read_extopt_input(
-            self,
-            filepath: str
-            ) -> Tuple[str, int, int, int, bool, Optional[str]]:
+        self, filepath: str
+    ) -> Tuple[str, int, int, int, bool, Optional[str]]:
         """
         Reads an input file written by ORCA and returns the parsed values as a tuple.
 
@@ -18,20 +19,19 @@ class ExtoptInterface:
 
         Returns
         -------
-            Tuple containing:
-                - xyz_filename (str)
-                - charge (int)
-                - multiplicity (int)
-                - ncores (int)
-                - do_gradient (bool)
-                - pointcharge_filename (str or None), optional
+        Tuple containing:
+            xyz_filename: str
+            charge: int
+            multiplicity: int
+            number of cores: int
+            do_gradient: bool
+            pointcharge_filename: str | None, optional
         """
         # Get every first entry of each line of input file
-        with open(filepath, 'r') as f:
+        with open(filepath, "r") as f:
             lines = [
-                line.split(" ")[0].strip()
-                for line in f.readlines() if line.strip()
-                ]
+                line.split(" ")[0].strip() for line in f.readlines() if line.strip()
+            ]
 
         if len(lines) < 5:
             raise ValueError("Input file must have at least 5 lines.")
@@ -59,22 +59,22 @@ class ExtoptInterface:
         # Optional pointcharges
         pointcharge_filename = lines[5] if len(lines) >= 6 else None
 
-        return(
+        return (
             xyz_filename,
-            charge, multiplicity,
+            charge,
+            multiplicity,
             ncores,
             do_gradient,
-            pointcharge_filename
-            )
-    
-    
+            pointcharge_filename,
+        )
+
     def write_orca_input(
-            self,
-            filename: str,
-            nat :int,
-            etot: float,
-            grad: list[float] = None,
-            ) -> None:
+        self,
+        filename: str,
+        nat: int,
+        etot: float,
+        grad: list[float] = None,
+    ) -> None:
         """
         Writes an input for ORCA similar to external-tools format.
 
@@ -90,7 +90,7 @@ class ExtoptInterface:
             gradients as plain list in Hartee/Bohr
             if not present or empty, it is not written
         """
-        with open(filename, 'w') as f:
+        with open(filename, "w") as f:
             output = "#\n"
             output += "# Number of atoms\n"
             output += "#\n"

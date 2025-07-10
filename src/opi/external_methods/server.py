@@ -5,11 +5,13 @@ import time
 
 from opi.external_methods.process import Process
 
-class OpiServer():
+
+class OpiServer:
     """
     Class for running a server from a file via socket.
     """
-    def __init__(self, serverpath: str, host_id='127.0.0.1', port=9000):
+
+    def __init__(self, serverpath: str, host_id="127.0.0.1", port=9000):
         """
         Initialize server object with default values.
 
@@ -23,11 +25,10 @@ class OpiServer():
         port: int, default: 9000
             Port for the server
         """
-        self.process = Process() # Process starting the server
+        self.process = Process()  # Process starting the server
         self.serverpath = serverpath
         self._host_id = host_id
         self._port = port
-
 
     def set_id_and_port(self, host_id: str, port: int) -> None:
         """
@@ -43,18 +44,17 @@ class OpiServer():
         self._host_id = host_id
         self._port = port
 
-    
     def start_server(self) -> None:
         """
-        Starts the Server
+        Starts the Server from script
         Provides _host_id and _port via command line arguments
         """
         # First check, whether server.port is free
         if self.server_port_in_use():
             print(
                 f"Couldn't setup server on port {self._port} as the port is already in use."
-                )
-            print("Please check whether all previous servers were terminated.")
+            )
+            print("Please check whether all previous server were terminated.")
         else:
             # Start server by running a python process
             # Therefore, first set up the command line call for the server script
@@ -74,11 +74,9 @@ class OpiServer():
 
             # Wait a little to make sure server is fully initialized
             time.sleep(5)
-        
 
     def kill_server(self):
         self.process.stop_process()
-
 
     def server_port_in_use(self) -> bool:
         """
@@ -95,13 +93,16 @@ class OpiServer():
             except OSError:
                 return True  # Port is in use
         return False  # Port is free
-    
 
-class CalcServer():
+
+class CalcServer:
     """
     Class for running an OpiServer and load a calculator via pickle
     """
-    def __init__(self, serverpath: str, calculator=None, host_id='127.0.0.1', port=9000):
+
+    def __init__(
+        self, serverpath: str, calculator=None, host_id="127.0.0.1", port=9000
+    ):
         """
         Initialize server object with default values.
 
@@ -122,16 +123,13 @@ class CalcServer():
         self.server = OpiServer(serverpath=serverpath, host_id=host_id, port=port)
         self._calculator = calculator
 
-
     @property
     def calculator(self):
         return self._calculator
-    
 
     @calculator.setter
     def calculator(self, calc):
         self._calculator = calc
-
 
     def set_id_and_port(self, host_id: str, port: int) -> None:
         """
@@ -147,20 +145,23 @@ class CalcServer():
         if not self.server.server_port_in_use():
             self.server.set_id_and_port(host_id=host_id, port=port)
 
-
     def load_calculator(self) -> None:
         """
         Send the calculator to the server via pickle.
         """
         # Open a connection to server
-        with socket.create_connection((self.server._host_id, self.server._port)) as sock:
+        with socket.create_connection(
+            (self.server._host_id, self.server._port)
+        ) as sock:
             # Create a virtual file for communication
-            wfile = sock.makefile('wb')
+            wfile = sock.makefile("wb")
             # Send the calculator via pickle
-            pickle.dump({"type": "setup_calculator", "calculator": self._calculator}, wfile)
+            pickle.dump(
+                {"type": "setup_calculator", "calculator": self._calculator}, wfile
+            )
             wfile.flush()
-            # Get a response 
-            rfile = sock.makefile('rb')
+            # Get a response
+            rfile = sock.makefile("rb")
             response = pickle.load(rfile)
             print("Server setup response:", response)
 
@@ -169,3 +170,9 @@ class CalcServer():
         Start the server.
         """
         self.server.start_server()
+
+    def kill_server(self) -> None:
+        """
+        Kill the server.
+        """
+        self.server.kill_server()

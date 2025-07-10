@@ -1,18 +1,19 @@
 import subprocess
 
+
 class Process:
     """
     Class that runs a process, monitors it and terminates it.
     """
+
     def __init__(self):
         """
         Init Process object
         """
         # Variable for storing the process
         self.process = None
-    
 
-    def start(self, cmd: list[str], pipe = False) -> None:
+    def start(self, cmd: list[str], pipe=False) -> None:
         """
         Starts any process
 
@@ -27,23 +28,21 @@ class Process:
             # Start the server, optionally leave pipe open via stdin
             pipe_kwargs = {}
             if pipe:
-                pipe_kwargs['stdin'] = subprocess.PIPE
+                pipe_kwargs["stdin"] = subprocess.PIPE
             self.process = subprocess.Popen(cmd, **pipe_kwargs)
             print(f"Process started with PID {self.process.pid}")
         else:
             print("Process is already running.")
 
-
     def stop_process(self) -> None:
         """
         Kills the process if its running.
         """
-        if  self.process and self.process.poll() is None:
+        if self.process and self.process.poll() is None:
             print(f"Stopping process with PID {self.process.pid}")
             self.process.terminate()
             self.process.wait()
             self.process = None
-
 
     def process_is_running(self) -> bool:
         """
@@ -55,4 +54,3 @@ class Process:
             True if process is running, otherwise false
         """
         return self.process and self.process.poll() is None
-    
