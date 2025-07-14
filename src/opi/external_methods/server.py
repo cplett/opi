@@ -168,22 +168,7 @@ class CalcServer:
         with Client(address, authkey=b'secret') as conn:
             conn.send({"type": "setup_calculator", "calculator": self._calculator})
             response = conn.recv()
-            print("UNGA BUNGA")
             print("Server setup response:", response)
-        #with socket.create_connection(
-        #    (self.server._host_id, self.server._port)
-        #) as sock:
-        #    # Create a virtual file for communication
-        #    wfile = sock.makefile("wb")
-        #    # Send the calculator via pickle
-        #    pickle.dump(
-        #        {"type": "setup_calculator", "calculator": self._calculator}, wfile
-        #    )
-        #    wfile.flush()
-        #    # Get a response
-        #    rfile = sock.makefile("rb")
-        #    response = pickle.load(rfile)
-        #    print("Server setup response:", response)
 
     def start_server(self, exe: str=sys.executable) -> None:
         """
