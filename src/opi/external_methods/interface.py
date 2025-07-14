@@ -1,5 +1,7 @@
 from typing import Tuple, Optional
 
+from click import Path
+
 
 class ExtoptInterface:
     """
@@ -7,25 +9,24 @@ class ExtoptInterface:
     """
 
     def read_extopt_input(
-        self, filepath: str
-    ) -> Tuple[str, int, int, int, bool, Optional[str]]:
+        self, filepath: Path
+    ) -> tuple[str, int, int, int, bool, str | None]:
         """
         Reads an input file written by ORCA and returns the parsed values as a tuple.
 
         Attributes
         ----------
-        filepath: str
+        filepath: Path
             Path to the EXT input file.
 
         Returns
         -------
-        Tuple containing:
-            xyz_filename: str
-            charge: int
-            multiplicity: int
-            number of cores: int
-            do_gradient: bool
-            pointcharge_filename: str | None, optional
+        xyz_filename: str
+        charge: int
+        multiplicity: int
+        number of cores: int
+        do_gradient: bool
+        pointcharge_filename: str | None
         """
         # Get every first entry of each line of input file
         with open(filepath, "r") as f:
@@ -70,7 +71,7 @@ class ExtoptInterface:
 
     def write_orca_input(
         self,
-        filename: str,
+        filename: Path,
         nat: int,
         etot: float,
         grad: list[float] = None,
@@ -80,7 +81,7 @@ class ExtoptInterface:
 
         Attributes
         ----------
-        filepath: str
+        filepath: Path
             Path to file to write to.
         nat: int
             number of atoms

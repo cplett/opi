@@ -13,9 +13,9 @@ class Process:
         # Variable for storing the process
         self.process = None
 
-    def start(self, cmd: list[str], pipe=False) -> None:
+    def start(self, cmd: list[str], pipe: bool=False) -> None:
         """
-        Starts any process
+        Starts a subprocess
 
         Attributes
         ----------
@@ -23,14 +23,30 @@ class Process:
             List of arguments to be executed
         pipe: bool, default: False
             Determines whether to hold the channel open for piping input in or not.
+
+        Raises
+        ------
+        FileNotFoundError: If a file included in the cmd is not found.
+        OSError: If the executable is not found or fails to execute.
+        ValueError: If an invalid parameter is passed to Popen.
+        subprocess.SubprocessError: For other errors related to subprocess management.
         """
-        if self.process is None or self.process.poll() is not None:
+        if not self.process_is_running():
             # Start the server, optionally leave pipe open via stdin
             pipe_kwargs = {}
             if pipe:
                 pipe_kwargs["stdin"] = subprocess.PIPE
-            self.process = subprocess.Popen(cmd, **pipe_kwargs)
-            print(f"Process started with PID {self.process.pid}")
+            try:
+                self.process = subprocess.Popen(cmd, **pipe_kwargs)
+                print(f"Process started with PID {self.process.pid}")
+            except FileNotFoundError as e:
+                print("Command not found:", e)
+            except ValueError as e:
+                print("Invalid arguments:", e)
+            except subprocess.SubprocessError as e:
+                print("Subprocess error:", e)
+            except OSError as e:
+                print("OS error:", e)
         else:
             print("Process is already running.")
 
@@ -38,11 +54,17 @@ class Process:
         """
         Kills the process if its running.
         """
-        if self.process and self.process.poll() is None:
+        if self.process_is_running():
             print(f"Stopping process with PID {self.process.pid}")
+            # Softkill
             self.process.terminate()
-            self.process.wait()
-            self.process = None
+            try:
+                self.process.wait(timeout=30)
+                self.process = None
+            except subprocess.TimeoutExpired:
+            # Hard kill
+                self.process.kill()
+        self.process = None
 
     def process_is_running(self) -> bool:
         """

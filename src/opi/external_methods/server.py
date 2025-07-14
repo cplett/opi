@@ -3,12 +3,15 @@ import pickle
 import socket
 import time
 
+from typing import Any
+from multiprocessing.connection import Client
+
 from opi.external_methods.process import Process
 
 
 class OpiServer:
     """
-    Class for running a server from a file via socket.
+    Class for running a server from a file using a network socket.
     """
 
     def __init__(self, serverpath: str, host_id="127.0.0.1", port=9000):
@@ -44,10 +47,15 @@ class OpiServer:
         self._host_id = host_id
         self._port = port
 
-    def start_server(self) -> None:
+    def start_server(self, exe: str=sys.executable) -> None:
         """
         Starts the Server from script
-        Provides _host_id and _port via command line arguments
+        Passes self._host_id and self._port as command-line arguments to the server script.
+
+        Parameters
+        ----------
+        exe: str, default=sys.executable
+            Executable to use for starting the server
         """
         # First check, whether server.port is free
         if self.server_port_in_use():
@@ -55,17 +63,16 @@ class OpiServer:
                 f"Couldn't setup server on port {self._port} as the port is already in use."
             )
             print("Please check whether all previous server were terminated.")
+            sys.exit(101) # Exit and return 101 code
         else:
             # Start server by running a python process
             # Therefore, first set up the command line call for the server script
-            if self.process.process is None or self.process.poll() is not None:
+            if not self.process.process_is_running():
                 # Build the command list:
                 # ["python", server_script] + --host_id ID + --port port + optional args
-                cmd = [sys.executable, self.serverpath]
-                cmd.append("--host")
-                cmd.append(str(self._host_id))
-                cmd.append("--port")
-                cmd.append(str(self._port))
+                cmd = [exe, self.serverpath]
+                cmd.append("-b")
+                cmd.append(f"{self._host_id}:{self._port}")
                 # Start the server
                 self.process.start(cmd)
                 print(f"Server started with PID {self.process.process}")
@@ -76,6 +83,9 @@ class OpiServer:
             time.sleep(5)
 
     def kill_server(self):
+        """
+        Terminates the server if running
+        """
         self.process.stop_process()
 
     def server_port_in_use(self) -> bool:
@@ -101,7 +111,7 @@ class CalcServer:
     """
 
     def __init__(
-        self, serverpath: str, calculator=None, host_id="127.0.0.1", port=9000
+        self, serverpath: str, calculator: Any=None, host_id: str="127.0.0.1", port: int=9000
     ):
         """
         Initialize server object with default values.
@@ -110,8 +120,9 @@ class CalcServer:
         ----------
         serverpath: str
             Path to the server script
-        calculator: obj, default: None
-            A calculator that could be send to the server
+        calculator: Any, default: None
+            Anything that can be send to the server via pickle
+            Intended here to be calculator
         host_id: str, default: 127.0.0.1 (for local server only)
             IP to bind server to
             Can be changed, if someone wants, e.g., a network server
@@ -144,32 +155,46 @@ class CalcServer:
         """
         if not self.server.server_port_in_use():
             self.server.set_id_and_port(host_id=host_id, port=port)
+            print("ID and port successfully set up.")
+        else:
+            print("ID and port could not be set up.")
 
     def load_calculator(self) -> None:
         """
         Send the calculator to the server via pickle.
         """
         # Open a connection to server
-        with socket.create_connection(
-            (self.server._host_id, self.server._port)
-        ) as sock:
-            # Create a virtual file for communication
-            wfile = sock.makefile("wb")
-            # Send the calculator via pickle
-            pickle.dump(
-                {"type": "setup_calculator", "calculator": self._calculator}, wfile
-            )
-            wfile.flush()
-            # Get a response
-            rfile = sock.makefile("rb")
-            response = pickle.load(rfile)
+        address = (self.server._host_id, self.server._port)
+        with Client(address, authkey=b'secret') as conn:
+            conn.send({"type": "setup_calculator", "calculator": self._calculator})
+            response = conn.recv()
+            print("UNGA BUNGA")
             print("Server setup response:", response)
+        #with socket.create_connection(
+        #    (self.server._host_id, self.server._port)
+        #) as sock:
+        #    # Create a virtual file for communication
+        #    wfile = sock.makefile("wb")
+        #    # Send the calculator via pickle
+        #    pickle.dump(
+        #        {"type": "setup_calculator", "calculator": self._calculator}, wfile
+        #    )
+        #    wfile.flush()
+        #    # Get a response
+        #    rfile = sock.makefile("rb")
+        #    response = pickle.load(rfile)
+        #    print("Server setup response:", response)
 
-    def start_server(self) -> None:
+    def start_server(self, exe: str=sys.executable) -> None:
         """
         Start the server.
+
+        Parameters
+        ----------
+        exe: str, default=sys.executable
+            Executable to use for starting the server
         """
-        self.server.start_server()
+        self.server.start_server(exe=exe)
 
     def kill_server(self) -> None:
         """
