@@ -11,7 +11,7 @@ class Process:
         Init Process object
         """
         # Variable for storing the process
-        self.process = None
+        self.process: subprocess.Popen | None = None
 
     def start(self, cmd: list[str], pipe: bool=False) -> None:
         """

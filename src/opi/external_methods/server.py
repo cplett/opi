@@ -14,7 +14,7 @@ class OpiServer:
     Class for running a server from a file using a network socket.
     """
 
-    def __init__(self, serverpath: str, host_id="127.0.0.1", port=9000):
+    def __init__(self, serverpath: str, host_id : str = "127.0.0.1", port: int = 9000):
         """
         Initialize server object with default values.
 
@@ -47,14 +47,14 @@ class OpiServer:
         self._host_id = host_id
         self._port = port
 
-    def start_server(self, exe: str=sys.executable) -> None:
+    def start_server(self, exe: str = sys.executable) -> None:
         """
         Starts the Server from script
         Passes self._host_id and self._port as command-line arguments to the server script.
 
         Parameters
         ----------
-        exe: str, default=sys.executable
+        exe: str, default: sys.executable
             Executable to use for starting the server
         """
         # First check, whether server.port is free
@@ -111,7 +111,7 @@ class CalcServer:
     """
 
     def __init__(
-        self, serverpath: str, calculator: Any=None, host_id: str="127.0.0.1", port: int=9000
+        self, serverpath: str, calculator: Any = None, host_id: str = "127.0.0.1", port: int = 9000
     ):
         """
         Initialize server object with default values.
@@ -170,7 +170,7 @@ class CalcServer:
             response = conn.recv()
             print("Server setup response:", response)
 
-    def start_server(self, exe: str=sys.executable) -> None:
+    def start_server(self, exe: str = sys.executable) -> None:
         """
         Start the server.
 
