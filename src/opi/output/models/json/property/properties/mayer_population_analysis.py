@@ -15,7 +15,7 @@ class MayerPopulationAnalysis(PopulationAnalysis):
     ----------
     bondthresh: StrictPositiveFiniteFloat | None, default = None
         Threshold for the bound order to be printed
-    nbondordersprint: StrictPositiveInt | None, default = None
+    nbondordersprint: StrictNonNegativeInt | None, default = None
         Number of bounds
     bondorders: list[list[StrictFiniteFloat]] | None, default = None
         Bound order of each Bound
@@ -36,7 +36,7 @@ class MayerPopulationAnalysis(PopulationAnalysis):
     """
 
     bondthresh: StrictPositiveFloat | None = None
-    nbondordersprint: StrictPositiveInt | None = None
+    nbondordersprint: StrictNonNegativeInt | None = None
     bondorders: list[list[StrictFiniteFloat]] | None = None
     components: (
         list[
