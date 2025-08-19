@@ -1,10 +1,10 @@
-import sys
-import pickle
 import socket
+import subprocess
+import sys
 import time
-
-from typing import Any
+from enum import Enum
 from multiprocessing.connection import Client
+from typing import Any
 
 from opi.external_methods.process import Process
 
@@ -14,7 +14,17 @@ class OpiServer:
     Class for running a server from a file using a network socket.
     """
 
-    def __init__(self, serverpath: str, host_id : str = "127.0.0.1", port: int = 9000):
+    class ServerStatus(Enum):
+        RUNNING = "running"
+        PORT_IN_USE = "port_in_use"
+        ALREADY_RUNNING = "already_running"
+        EXEC_NOT_FOUND = "exec_not_found"
+        INVALID_ARGS = "invalid_args"
+        SUBPROCESS_ERROR = "subprocess_error"
+        OS_ERROR = "os_error"
+        BOOT_TIMEOUT = "boot_timeout"
+
+    def __init__(self, serverpath: str, host_id: str = "127.0.0.1", port: int = 9000):
         """
         Initialize server object with default values.
 
@@ -47,42 +57,86 @@ class OpiServer:
         self._host_id = host_id
         self._port = port
 
-    def start_server(self, exe: str = sys.executable) -> None:
+    def _wait_for_port(self, host: str, port: int, timeout: float = 5.0) -> bool:
+        """
+        Waits a little and checks if the server is reachable within the required time
+
+        Parameters
+        host: str
+            Host ID
+        port: str
+            Port of server
+        timeout:
+            float, default: 5.0 (sec)
+        """
+        end = time.time() + timeout
+        while time.time() < end:
+            with socket.socket() as s:
+                s.settimeout(0.25)
+                try:
+                    s.connect((host, port))
+                    return True
+                except OSError:
+                    time.sleep(0.1)
+        return False
+
+    def start_server(self, cmd_arguments: str | None = None, exe: str = sys.executable, max_boot_time: float = 5.0) -> ServerStatus:
         """
         Starts the Server from script
         Passes self._host_id and self._port as command-line arguments to the server script.
 
         Parameters
         ----------
+        cmd_arguments: str | None, default: None
+            cmd arguments that should be passed to the server
         exe: str, default: sys.executable
             Executable to use for starting the server
+        max_boot_time: float, default: 5.0 (sec)
+            Maximum time in sec to wait till server is booted
+
+        Returns
+        -------
+        ServerStatus: Indicates if server is running or the type of error
         """
         # First check, whether server.port is free
         if self.server_port_in_use():
-            print(
-                f"Couldn't setup server on port {self._port} as the port is already in use."
-            )
-            print("Please check whether all previous server were terminated.")
-            sys.exit(101) # Exit and return 101 code
+            return self.ServerStatus.PORT_IN_USE
         else:
             # Start server by running a python process
             # Therefore, first set up the command line call for the server script
-            if not self.process.process_is_running():
-                # Build the command list:
-                # ["python", server_script] + --host_id ID + --port port + optional args
-                cmd = [exe, self.serverpath]
-                cmd.append("-b")
-                cmd.append(f"{self._host_id}:{self._port}")
-                # Start the server
+            # Build the command list:
+            # ["python", server_script] + -b ID:port + optional args
+            cmd = [exe, self.serverpath]
+            cmd.append("-b")
+            cmd.append(f"{self._host_id}:{self._port}")
+            if cmd_arguments:
+                cmd.append(cmd_arguments)
+            # Start the server
+            try:
                 self.process.start(cmd)
-                print(f"Server started with PID {self.process.process}")
-            else:
-                print("Server is already running.")
+            except self.process.ProcessAlreadyRunningError:
+                return self.ServerStatus.ALREADY_RUNNING
+            except FileNotFoundError:
+                return self.ServerStatus.EXEC_NOT_FOUND
+            except ValueError:
+                return self.ServerStatus.INVALID_ARGS
+            except subprocess.SubprocessError:
+                return self.ServerStatus.SUBPROCESS_ERROR
+            except OSError:
+                return self.ServerStatus.OS_ERROR
 
-            # Wait a little to make sure server is fully initialized
-            time.sleep(5)
+        # Wait until the port is reachable
+        if not self._wait_for_port(self._host_id, self._port, timeout=max_boot_time):
+            # best effort cleanup
+            try:
+                self.process.stop_process()
+            finally:
+                pass
+            return self.ServerStatus.BOOT_TIMEOUT
 
-    def kill_server(self):
+        return self.ServerStatus.RUNNING
+
+    def kill_server(self) -> None:
         """
         Terminates the server if running
         """
@@ -93,16 +147,14 @@ class OpiServer:
         Checks whether self._port is already in use.
 
         Returns
-        ----------
+        -------
         bool
-            True if port is already used.
+            True if the port is in use (something is listening), False otherwise.
         """
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            try:
-                s.bind((self._host_id, self._port))
-            except OSError:
-                return True  # Port is in use
-        return False  # Port is free
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.settimeout(1)  # Quick fail if not open
+            result = sock.connect_ex((self._host_id, self._port))
+            return result == 0  # Port is in use if connect_ex returns 0
 
 
 class CalcServer:
@@ -111,7 +163,11 @@ class CalcServer:
     """
 
     def __init__(
-        self, serverpath: str, calculator: Any = None, host_id: str = "127.0.0.1", port: int = 9000
+        self,
+        serverpath: str,
+        calculator: Any = None,
+        host_id: str = "127.0.0.1",
+        port: int = 9000,
     ):
         """
         Initialize server object with default values.
@@ -135,14 +191,14 @@ class CalcServer:
         self._calculator = calculator
 
     @property
-    def calculator(self):
+    def calculator(self) -> Any:
         return self._calculator
 
     @calculator.setter
-    def calculator(self, calc):
+    def calculator(self, calc: Any) -> None:
         self._calculator = calc
 
-    def set_id_and_port(self, host_id: str, port: int) -> None:
+    def set_id_and_port(self, host_id: str, port: int) -> bool:
         """
         Change the host_id and port if server not running.
 
@@ -152,25 +208,26 @@ class CalcServer:
             host_id ID.
         port: int
             Port to use.
+
+        Return
+        bool: Whether setup was successfully or not
         """
         if not self.server.server_port_in_use():
             self.server.set_id_and_port(host_id=host_id, port=port)
-            print("ID and port successfully set up.")
+            return True
         else:
-            print("ID and port could not be set up.")
+            return False
 
     def load_calculator(self) -> None:
         """
-        Send the calculator to the server via pickle.
+        Send the calculator to the server via pickle. Return response.
         """
         # Open a connection to server
         address = (self.server._host_id, self.server._port)
-        with Client(address, authkey=b'secret') as conn:
+        with Client(address) as conn:
             conn.send({"type": "setup_calculator", "calculator": self._calculator})
-            response = conn.recv()
-            print("Server setup response:", response)
 
-    def start_server(self, exe: str = sys.executable) -> None:
+    def start_server(self, exe: str = sys.executable) -> OpiServer.ServerStatus:
         """
         Start the server.
 
@@ -178,8 +235,12 @@ class CalcServer:
         ----------
         exe: str, default=sys.executable
             Executable to use for starting the server
+
+        Returns
+        -------
+        bool: True if server started correctly
         """
-        self.server.start_server(exe=exe)
+        return self.server.start_server(exe=exe)
 
     def kill_server(self) -> None:
         """

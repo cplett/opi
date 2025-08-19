@@ -1,6 +1,4 @@
-from typing import Tuple, Optional
-
-from click import Path
+from pathlib import Path
 
 
 class ExtoptInterface:
@@ -8,9 +6,7 @@ class ExtoptInterface:
     Class for reading and writing ORCA files related to the ExtOpt keyword
     """
 
-    def read_extopt_input(
-        self, filepath: Path
-    ) -> tuple[str, int, int, int, bool, str | None]:
+    def read_extopt_input(self, filepath: Path) -> tuple[str, int, int, int, bool, str | None]:
         """
         Reads an input file written by ORCA and returns the parsed values as a tuple.
 
@@ -30,9 +26,7 @@ class ExtoptInterface:
         """
         # Get every first entry of each line of input file
         with open(filepath, "r") as f:
-            lines = [
-                line.split(" ")[0].strip() for line in f.readlines() if line.strip()
-            ]
+            lines = [line.split(" ")[0].strip() for line in f.readlines() if line.strip()]
 
         if len(lines) < 5:
             raise ValueError("Input file must have at least 5 lines.")
@@ -44,12 +38,10 @@ class ExtoptInterface:
         ncores = int(lines[3])
 
         # Check if gradient should be calculated or not
-        if int(lines[4]) == 0:
-            do_gradient = False
-        elif int(lines[4]) == 1:
-            do_gradient = True
-        else:
-            raise ValueError("do_gradient from ORCA input must be 0 or 1.")
+        try:
+            do_gradient = int(lines[4]) == 1
+        except ValueError as err:
+            raise ValueError("do_gradient from ORCA input must be 0 or 1.") from err
 
         # Some sanity checks
         if multiplicity < 1:
@@ -74,7 +66,7 @@ class ExtoptInterface:
         filename: Path,
         nat: int,
         etot: float,
-        grad: list[float] = None,
+        grad: list[float] | None = None,
     ) -> None:
         """
         Writes an input for ORCA similar to external-tools format.
