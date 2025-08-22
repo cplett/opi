@@ -32,7 +32,7 @@ class Process:
 
         Attributes
         ----------
-        cmd: str
+        cmd: list[str]
             List of arguments to be executed
         pipe: bool, default: False
             Determines whether to hold the channel open for piping input in or not.
