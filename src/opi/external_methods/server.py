@@ -57,7 +57,7 @@ class OpiServer:
         self._host_id = host_id
         self._port = port
 
-    def _wait_for_port(self, host: str, port: int, timeout: float = 5.0) -> bool:
+    def _wait_for_port(self, host: str, port: int, timeout: float = 10.0) -> bool:
         """
         Waits a little and checks if the server is reachable within the required time
 
@@ -80,7 +80,7 @@ class OpiServer:
                     time.sleep(0.1)
         return False
 
-    def start_server(self, cmd_arguments: str | None = None, exe: str = sys.executable, max_boot_time: float = 5.0) -> ServerStatus:
+    def start_server(self, cmd_arguments: str | None = None, exe: str = sys.executable, max_boot_time: float = 20.0) -> ServerStatus:
         """
         Starts the Server from script
         Passes self._host_id and self._port as command-line arguments to the server script.
