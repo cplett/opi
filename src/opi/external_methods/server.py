@@ -24,7 +24,7 @@ class OpiServer:
         OS_ERROR = "os_error"
         BOOT_TIMEOUT = "boot_timeout"
 
-    def __init__(self, serverpath: str, host_id: str = "127.0.0.1", port: int = 9000):
+    def __init__(self, serverpath: str, host_id: str = "127.0.0.1", port: int = 8888):
         """
         Initialize server object with default values.
 
@@ -35,7 +35,7 @@ class OpiServer:
         host_id: str, default: 127.0.0.1 (for local server only)
             IP to bind server to.
             Can be changed, if someone wants, e.g., a network server.
-        port: int, default: 9000
+        port: int, default: 8888
             Port for the server
         """
         self.process = Process()  # Process starting the server
@@ -167,7 +167,7 @@ class CalcServer:
         serverpath: str,
         calculator: Any = None,
         host_id: str = "127.0.0.1",
-        port: int = 9000,
+        port: int = 8888,
     ):
         """
         Initialize server object with default values.
@@ -182,7 +182,7 @@ class CalcServer:
         host_id: str, default: 127.0.0.1 (for local server only)
             IP to bind server to
             Can be changed, if someone wants, e.g., a network server
-        port: int, default: 9000
+        port: int, default: 8888
             Port for the server
         """
         # Server values are set one time at the beginning and not changed
